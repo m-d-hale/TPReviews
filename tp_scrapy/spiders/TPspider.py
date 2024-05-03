@@ -2,12 +2,15 @@ import scrapy
 import logging
 import os
 import sys
+from datetime import datetime, timedelta
 
 class TP_Spider(scrapy.Spider):
-    name = "tpreviews2"
+    name = "TPGrabReviews"
     start_urls = [
-        'https://uk.trustpilot.com/review/paragonbank.co.uk?sort=recency',
-        'https://uk.trustpilot.com/review/www.hodgebank.co.uk?sort=recency',
+        'https://uk.trustpilot.com/review/cinch.co.uk?sort=recency',
+        'https://uk.trustpilot.com/review/cazoo.co.uk?sort=recency',
+        'https://uk.trustpilot.com/review/carwow.co.uk?sort=recency',
+        'https://uk.trustpilot.com/review/motorway.co.uk',
     ]
     custom_settings = {
         'FEEDS': {'TrustPilot.json': {'format':'json', 'overwrite': True}}
@@ -15,6 +18,13 @@ class TP_Spider(scrapy.Spider):
 
     def parse(self,response):
         for reviews in response.css('div.styles_reviewCardInner__EwDq2'):
+            try:
+                posted_date_time = reviews.css('div.typography_body-m__xgxZ_.typography_appearance-subtle__8_H2l.styles_datesWrapper__RCEKH > *:last-child').attrib['datetime']
+            except:
+                posted_date_time = reviews.css('div.typography_body-m__xgxZ_.typography_appearance-subtle__8_H2l.styles_datesWrapper__RCEKH > span > time').attrib['datetime']
+            posted_date_time = datetime.strptime(posted_date_time, "%Y-%m-%dT%H:%M:%S.%fZ")   # Convert to datetime object
+            if posted_date_time < datetime.now() - timedelta(days=180):  # If the review is older than 6 months stop the spider
+                return   
             try:
                 yield {
                     'url':response.url,
